@@ -99,6 +99,9 @@ endif
 if !exists(':MBEbun')
   command! -bang -nargs=* MBEbun call <SID>DeleteBuffer(2,'<bang>'=='!',<f-args>)
 endif
+if !exists(':MBEbln')
+  command! -nargs=1 MBEbln call <SID>SwitchToLetteredBuffer(<f-args>)
+endif
 
 " }}}
 "
@@ -262,6 +265,10 @@ if !exists('g:miniBufExplShowBufNumbers')
   let g:miniBufExplShowBufNumbers = 1
 endif
 
+if !exists('g:miniBufExplShowBufLetters')
+  let g:miniBufExplShowBufLetters = 1
+endif
+
 " }}}
 " Single/Double Click? {{{
 " flag that can be set to 1 in a users .vimrc to allow
@@ -352,6 +359,9 @@ let s:bufNameDict = {}
 " Dictionary used to map buffer numbers to names when the buffer
 " names are not unique.
 let s:bufUniqNameDict = {}
+
+" Mapping from buffer letter to buffer number
+let s:bufLettersDict = {}
 
 " Dictionary used to hold the path parts for each buffer
 let s:bufPathDict = {}
@@ -632,7 +642,7 @@ function! <SID>StartExplorer(curBufNum)
   " them off for the MBE window
   setlocal foldcolumn=0
   setlocal nonumber
-  if exists("&norelativenumber")
+  if exists("&relativenumber")
     " relativenumber was introduced in Vim 7.3 - this provides compatibility
     " for older versions of Vim
     setlocal norelativenumber
@@ -1515,6 +1525,9 @@ function! <SID>BuildBufferList(curBufNum)
         " Establish the tab's content, including the differentiating root
         " dir if neccessary
         let l:tab = '['
+        if g:miniBufExplShowBufLetters == 1
+          let l:tab .= '?:'
+        endif
         if g:miniBufExplShowBufNumbers == 1
             let l:tab .= l:i.':'
         endif
@@ -1548,6 +1561,23 @@ function! <SID>BuildBufferList(curBufNum)
         call sort(l:tabList, "<SID>MRUCmp")
     endif
 
+    if g:miniBufExplShowBufLetters == 1
+      call map(l:tabList, {i, s -> substitute(s, '?',
+        \ i < 26 ? nr2char(i + char2nr('a')) :
+                 \ nr2char(i - 26 + char2nr('A')), '')})
+      let s:bufLettersDict = {}
+      for l:line in l:tabList
+        if g:miniBufExplShowBufNumbers == 1
+          let l:n = substitute(l:line, '\[.:\([0-9]*\):.*', '\1', '') + 0
+        else
+          let l:bufUniqNameDictKeys = keys(s:bufUniqNameDict)
+          let l:bufUniqNameDictValues = values(s:bufUniqNameDict)
+          let l:n = l:bufUniqNameDictKeys[match(l:bufUniqNameDictValues,
+                          \ substitute(l:line,'[0-9]*:\(.*\)', '\1', ''))]
+        endif
+        let s:bufLettersDict[l:line[1]] = l:n
+      endfor
+    endif
     let l:miniBufExplBufList = ''
     for l:tab in l:tabList
         let l:miniBufExplBufList = l:miniBufExplBufList.l:tab
@@ -2461,7 +2491,17 @@ function! s:SwitchWindow(action, ...)
 
   call <SID>DEBUG('Leaving SwitchWindow()',10)
 endfunction
+" }}}
+" SwitchToLetteredBuffer {{{
 
+function! s:SwitchToLetteredBuffer(letter)
+  if has_key(s:bufLettersDict, a:letter)
+    let l:bn = s:bufLettersDict[a:letter]
+    silent execute ":buffer " . string(l:bn)
+  else
+    echo "No buffer for letter '" . a:letter . "'"
+  endif
+endfunction
 " }}}
 
 " vim:ft=vim:fdm=marker:ff=unix:nowrap:tabstop=2:shiftwidth=2:softtabstop=2:smarttab:shiftround:expandtab
