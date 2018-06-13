@@ -1104,10 +1104,14 @@ function! <SID>DisplayBuffers(curBufNum)
 
   " Place cursor at current buffer in MBE
   if !<SID>IsBufferIgnored(a:curBufNum)
-    if !g:miniBufExplShowBufNumbers
-      call search('\V['.s:bufUniqNameDict[a:curBufNum].']', 'w')
+    if !g:miniBufExplVSplit
+      if !g:miniBufExplShowBufNumbers
+        call search('\V['.s:bufUniqNameDict[a:curBufNum].']', 'w')
+      else
+        call search('\V['.a:curBufNum.':'.s:bufUniqNameDict[a:curBufNum].']', 'w')
+      endif
     else
-      call search('\V['.a:curBufNum.':'.s:bufUniqNameDict[a:curBufNum].']', 'w')
+      call cursor(a:curBufNum, 0)
     endif
   endif
 
@@ -1216,6 +1220,11 @@ function! <SID>ResizeWindow()
       call <SID>DEBUG('ResizeWindow to '.l:newWidth.' columns',9)
       exec 'vertical resize '.l:newWidth
     endif
+    " if there are more than enough entries in both directions
+    " then center the selected line
+    let l:lines = winheight('%') / 2
+    exec 'setlocal scrolloff='.l:lines
+
 
     let saved_ead = &ead
     let &ead = 'hor'
@@ -1266,6 +1275,11 @@ function! <SID>ShowBuffers()
   $
   put! =s:miniBufExplBufList
   silent $ d _
+
+  " in VSplit scroll the viewport as topmost as possible
+  if g:miniBufExplVSplit == 1
+    call cursor(1,0)
+  endif
 
   " Prevent the buffer from being modified.
   setlocal nomodifiable
@@ -1534,6 +1548,8 @@ function! <SID>BuildBufferList(curBufNum)
         let l:tab .= s:bufUniqNameDict[l:i]
         let l:tab .= ']'
 
+        let l:tabWidth = strlen(l:tab)
+
         " If the buffer is open in a window mark it
         if bufwinnr(l:i) != -1
             let l:tab .= '*'
@@ -1550,7 +1566,16 @@ function! <SID>BuildBufferList(curBufNum)
             let l:tab .= '!'
         endif
 
-        let l:maxTabWidth = strlen(l:tab) > l:maxTabWidth ? strlen(l:tab) : l:maxTabWidth
+        if g:miniBufExplVSplit == 0
+          " in normal mode, take the actual width as the TabWidth
+          let l:tabWidth = strlen(l:tab)
+        else
+          " in VSplit mode, use the potentially maximal width of a tab
+          " i.e. the tab content plus space for all the possible flags
+          let l:tabWidth = l:tabWidth + 3
+        endif
+
+        let l:maxTabWidth = l:tabWidth > l:maxTabWidth ? l:tabWidth : l:maxTabWidth
 
         call add(l:tabList, l:tab)
     endfor
