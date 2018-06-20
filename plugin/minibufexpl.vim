@@ -1115,6 +1115,18 @@ function! <SID>DisplayBuffers(curBufNum)
     endif
   endif
 
+  " Scroll window to: 1) display as many buffers as possible and 2) keep the
+  " selected buffer as close to center as a possible
+  let l:wh = winheight('%')
+  let l:total_lines = line('$')
+  let l:cur_line = line('.')
+
+  if l:total_lines - l:cur_line > (l:wh / 2)
+    silent execute "normal zz"
+  else
+    silent execute "normal Gz-\<c-o>"
+  endif
+
   call <SID>DEBUG('Leaving DisplayExplorer()',10)
 endfunction
 
@@ -1220,11 +1232,6 @@ function! <SID>ResizeWindow()
       call <SID>DEBUG('ResizeWindow to '.l:newWidth.' columns',9)
       exec 'vertical resize '.l:newWidth
     endif
-    " if there are more than enough entries in both directions
-    " then center the selected line
-    let l:lines = winheight('%') / 2
-    exec 'setlocal scrolloff='.l:lines
-
 
     let saved_ead = &ead
     let &ead = 'hor'
