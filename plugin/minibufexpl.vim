@@ -2222,14 +2222,16 @@ function! <SID>GetSelectedBuffer()
   let @" = ""
   normal ""yi[
   if @" != ""
-    if !g:miniBufExplShowBufNumbers
+    if g:miniBufExplShowBufLetters
+      let l:retv = s:bufLettersDict[@"[0]]
+    elseif g:miniBufExplShowBufNumbers
+      let l:retv = substitute(@",'\([0-9]*\):.*', '\1', '') + 0
+    else
       " This is a bit ugly, but it works, unless we come up with a
       " better way to get the key for a dictionary by its value.
       let l:bufUniqNameDictKeys = keys(s:bufUniqNameDict)
       let l:bufUniqNameDictValues = values(s:bufUniqNameDict)
       let l:retv = l:bufUniqNameDictKeys[match(l:bufUniqNameDictValues,substitute(@",'[0-9]*:\(.*\)', '\1', ''))]
-    else
-      let l:retv = substitute(@",'\([0-9]*\):.*', '\1', '') + 0
     endif
     let @" = l:save_reg
     call <SID>DEBUG('Leaving GetSelectedBuffer()',10)
