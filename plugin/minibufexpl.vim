@@ -1124,7 +1124,9 @@ function! <SID>DisplayBuffers(curBufNum)
   if l:total_lines - l:cur_line > (l:wh / 2)
     silent execute "normal zz"
   else
-    silent execute "normal Gz-\<c-o>"
+    if !has("nvim")
+      silent execute "normal Gz-\<c-o>"
+    endif
   endif
 
   call <SID>DEBUG('Leaving DisplayExplorer()',10)
